@@ -218,3 +218,4 @@ __marimo__/
 .streamlit/secrets.toml
 *.code-workspace
 .DS_Store
+font-glyphs-to-svg/icons
