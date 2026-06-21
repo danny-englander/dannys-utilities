@@ -1,10 +1,9 @@
 """
 OpenSea Collection Scraper
-Collection: midcentury-modern-design
 Fetches all NFT metadata, traits, and images via the OpenSea v2 API.
 
 Usage:
-    python opensea_scraper.py --api-key YOUR_API_KEY
+    python opensea_scraper.py --api-key YOUR_API_KEY --collection COLLECTION_SLUG
 
 Output:
     collection_data.json  — all NFT metadata and traits
@@ -22,7 +21,6 @@ from urllib.parse import urlparse
 
 # ── Config ──────────────────────────────────────────────────────────────────
 
-COLLECTION_SLUG = "midcentury-modern-design"
 BASE_URL        = "https://api.opensea.io/api/v2"
 LIMIT           = 50          # max items per page (OpenSea cap)
 RATE_LIMIT_WAIT = 0.5         # seconds between requests (free tier: ~2 req/s)
@@ -114,21 +112,21 @@ def image_ext(url: str) -> str:
 
 # ── Collection info ──────────────────────────────────────────────────────────
 
-def fetch_collection_info(api_key: str) -> dict:
-    url = f"{BASE_URL}/collections/{COLLECTION_SLUG}"
+def fetch_collection_info(api_key: str, collection_slug: str) -> dict:
+    url = f"{BASE_URL}/collections/{collection_slug}"
     return make_request(url, api_key)
 
 
 # ── NFT pagination ───────────────────────────────────────────────────────────
 
-def fetch_all_nfts(api_key: str) -> list[dict]:
+def fetch_all_nfts(api_key: str, collection_slug: str) -> list[dict]:
     """Page through all NFTs in the collection."""
     nfts   = []
     cursor = None
     page   = 1
 
     while True:
-        url = f"{BASE_URL}/collection/{COLLECTION_SLUG}/nfts?limit={LIMIT}"
+        url = f"{BASE_URL}/collection/{collection_slug}/nfts?limit={LIMIT}"
         if cursor:
             url += f"&next={cursor}"
 
@@ -195,12 +193,13 @@ def download_images(nfts: list[dict], image_dir: str) -> int:
 def main():
     parser = argparse.ArgumentParser(description="OpenSea collection scraper")
     parser.add_argument("--api-key",            required=True,  help="Your OpenSea API key")
+    parser.add_argument("--collection",         required=True,  help="OpenSea collection slug (e.g. midcentury-modern-design)")
     parser.add_argument("--no-images",          action="store_true", help="Skip image downloads")
     parser.add_argument("--no-collection-info", action="store_true", help="Skip collection metadata (use if getting 403 on that endpoint)")
     parser.add_argument("--output",             default=OUTPUT_FILE, help="Output JSON filename")
     args = parser.parse_args()
 
-    print(f"\n🎨  OpenSea scraper — {COLLECTION_SLUG}\n{'─'*50}")
+    print(f"\n🎨  OpenSea scraper — {args.collection}\n{'─'*50}")
 
     # 1. Collection-level info
     collection_info = {}
@@ -208,13 +207,13 @@ def main():
         print("\n[1/3] Skipping collection info (--no-collection-info)")
     else:
         print("\n[1/3] Fetching collection info …")
-        collection_info = fetch_collection_info(args.api_key)
+        collection_info = fetch_collection_info(args.api_key, args.collection)
         print(f"  Name  : {collection_info.get('name', '?')}")
         print(f"  Supply: {collection_info.get('total_supply', '?')}")
 
     # 2. All NFTs
     print("\n[2/3] Fetching NFTs …")
-    nfts = fetch_all_nfts(args.api_key)
+    nfts = fetch_all_nfts(args.api_key, args.collection)
     print(f"  ✓ {len(nfts)} NFTs fetched")
 
     # 3. Save JSON
